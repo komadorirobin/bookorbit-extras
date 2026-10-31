@@ -1,0 +1,50 @@
+name: Patch checks (no deployment)
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  patches:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install -y luajit lua5.1 python3 openssl
+      - name: Verify pinned bytes and notices
+        run: python3 scripts/check.py
+      - name: Check device patches against exact upstream sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          lua5.1 tests/bookorbit_undo_state_test.lua
+          luajit tests/bookorbit_undo_state_test.lua
+          for profile in 2855dbb8a39d20bf711f01772e2678ef0625dd63 c59dd0118fd0d5d0ecbd716d1d7fde2c97f8e2ea a96ff0c85a4c25e9126dfa4c71ea87537a3baf7a; do
+            target="$RUNNER_TEMP/bookorbit-$profile"
+            mkdir -p "$target"
+            curl -fLsS --retry 3 "https://codeload.github.com/bookorbit/bookorbit/tar.gz/$profile" | tar -xz -C "$target" --strip-components=3 --wildcards '*/koreader-plugin/bookorbit.koplugin/*'
+            lua5.1 tests/bookorbit_undo_patch_test.lua "$target"
+            luajit tests/bookorbit_undo_patch_test.lua "$target"
+          done
+          target="$RUNNER_TEMP/hardcover"
+          mkdir -p "$target"
+          curl -fLsS --retry 3 https://codeload.github.com/Billiam/hardcoverapp.koplugin/tar.gz/fa352e777e96e983dd43b35ed6d83f89531a196c | tar -xz -C "$target" --strip-components=1
+          lua5.1 tests/hardcover_bookorbit_sync_test.lua "$target"
+          luajit tests/hardcover_bookorbit_sync_test.lua "$target"
+      - name: Check server diffs against their separate pinned bases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess
+          manifest = json.loads(pathlib.Path('compatibility.json').read_text())
+          root = pathlib.Path.cwd()
+          for name in ('undoOpeningV1', 'tagMatchesV1'):
+              entry = manifest[name]
+              target = pathlib.Path(os.environ['RUNNER_TEMP']) / name
+              target.mkdir()
+              archive = target / 'source.tar.gz'
+              subprocess.run(['curl', '-fLsS', '--retry', '3', f"https://codeload.github.com/bookorbit/bookorbit/tar.gz/{entry['serverBase']}", '-o', str(archive)], check=True)
+              subprocess.run(['tar', '-xzf', str(archive), '-C', str(target), '--strip-components=1'], check=True)
+              subprocess.run(['git', '-C', str(target), 'apply', '--check', str(root / entry['patch'])], check=True)
+          PY

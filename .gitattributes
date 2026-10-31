@@ -1,0 +1,6 @@
+/tests/ export-ignore
+/.github/ export-ignore
+/.gitignore export-ignore
+/.gitattributes export-ignore
+# Unified-diff blank context lines intentionally contain one space.
+*.patch -whitespace
