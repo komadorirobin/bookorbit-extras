@@ -1,5 +1,9 @@
 # Exact local-ID tag matching, API addition v1
 
+**Original development-base artifact. For official BookOrbit 3.6.0, including
+the supported combination with undo-opening, use the
+[version-specific package](../bookorbit-3.6.0/README.md).**
+
 Experimental, read-only BookOrbit server patch. Modified 2026-10-31; not an
 official BookOrbit release. **Not deployed by OrbitUI or this repository.**
 

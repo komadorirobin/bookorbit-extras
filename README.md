@@ -5,8 +5,8 @@ BookOrbit, KOReader or Hardcover release. No account credentials are included.
 Nothing here deploys a server automatically.
 
 [Svenska](#svenska) | [Compatibility and exact sources](compatibility.json)
-| [Device patches](#device-installation) | [Server tag API](server-support/tag-matches-v1/README.md)
-| [Undo server overlay](server-support/bookorbit-undo-opening/README.md)
+| [Device patches](#device-installation) | [BookOrbit 3.6.0 server extras](server-support/bookorbit-3.6.0/README.md)
+| [Legacy 3.2.0 overlay](server-support/bookorbit-undo-opening/README.md)
 
 ## What needs what?
 
@@ -14,15 +14,24 @@ Nothing here deploys a server automatically.
 | --- | --- | --- |
 | Want to read [Local] / local EPUB tags | OrbitUI; ordinary local files | Nothing. No account or BookOrbit patch. |
 | Want to read [BookOrbit] | Connected BookOrbit KOReader plugin and OrbitUI | Normal BookOrbit Want to Read API. No extras patch. Only matched local books appear. |
-| Online BookOrbit tag matches | OrbitUI Beta 22 or newer; connected account-scoped BookOrbit plugin | **Experimental tag-matches v1** patch, tested on exact base `ba315c7`. Read-only, linked local results across profiles, batches of 200 IDs. |
-| Undo accidental opening | `2-bookorbit-undo-opening.lua`, compatible BookOrbit plugin | **Undo-opening v1** server extension with migration 0101. The included overlay is **only for BookOrbit 3.2.0**, not every newer release. |
+| Online BookOrbit tag matches | OrbitUI Beta 22 or newer; connected account-scoped BookOrbit plugin | Optional **tag-matches v1** patch for exact official **3.6.0**. Read-only, linked local results across profiles, batches of 200 IDs. |
+| Undo accidental opening | `2-bookorbit-undo-opening.lua`, compatible BookOrbit plugin | **Undo-opening v1 port for official 3.6.0**, migration **0132**. Use the new complete-source build, not the old compiled overlay. |
 | One automatic Hardcover writer | `2-hardcover-bookorbit-sync.lua` plus the separate Hardcover plugin, with BookOrbit as your chosen automatic writer | Enable BookOrbit's normal Hardcover integration. No extra server patch for this feature. |
 
-The tag API patch and the old undo overlay target **different source bases**.
-Do not stack them on one installation or use the 3.2.0 overlay on a newer image.
-A reviewed combined rebase and tests are required first. An OrbitUI update does
-not mean your server has either extension. Neither server patch has been
-deployed by creating this repository.
+The new [3.6.0 package](server-support/bookorbit-3.6.0/README.md) targets exact
+official release `a96ff0c`, the latest stable checked on 2026-10-31. Undo and tags
+can be selected individually or together on that base. This does **not** mean
+3.2.0+, future releases or the moving development branch. An OrbitUI update
+does not install server extensions. Nothing has been deployed to your server.
+
+**Already running the old custom 3.2.0 undo database?** Stop and read the
+[upgrade warning](server-support/bookorbit-3.6.0/README.md#important-an-old-custom-320-database-is-not-an-ordinary-upgrade).
+Its migration 0101 collides with later upstream history. The new preflight
+refuses legacy/unknown extension databases before migration-ledger repair.
+That database needs a separately reviewed upgrade, not a blind image change.
+Never delete opening state or rewrite migration history to bypass the guard.
+The original 3.2.0 overlay and original development-base tag diff remain as
+**legacy artifacts**; do not stack those older artifacts or apply them to 3.6.0.
 
 ## Device installation
 
@@ -88,9 +97,10 @@ reading state. Embedded EPUB tags do not need this API.
 
 ## Sources, licensing and verification
 
-Collection format **0.1.0**, assembled 2026-10-31. Device patch bytes and undo
-support are mirrored unchanged from Ereader `6c05155c`. The new tag API diff
-comes from local BookOrbit commit `0cf7db1` on base `ba315c7`. Full revisions,
+Collection format **0.2.0**, assembled 2026-10-31. Device patch bytes remain
+unchanged from Ereader `6c05155c`. The server undo extension has been ported to
+official 3.6.0 and the optional tag API rebased to that same source. The original
+development-base tag implementation `0cf7db1` is retained separately. Full revisions,
 component versions and SHA-256 values are in `compatibility.json`. No fonts,
 artwork, private configuration or complete upstream plugin is bundled.
 
@@ -106,8 +116,10 @@ upstream source plus applied patches, if you deploy it. A link to this diff
 alone is not the complete source. Do not remove upstream notices or branding
 restrictions when building a modified server.
 
-Tests mock storage, network and credentials. They do not validate physical
-reader behaviour or a production database. Run from this repository root:
+Device and Hardcover transport tests mock storage/network/credentials. Server
+integration tests also use a disposable local PostgreSQL database. These do
+not validate physical reader behaviour or a production deployment. Run from
+this repository root:
 
 ```sh
 luajit tests/bookorbit_undo_state_test.lua
@@ -127,13 +139,13 @@ inte BookOrbit, KOReader eller Hardcover-pluginet. Inget driftsätts automatiskt
 - **Vill läsa [Lokalt] och EPUB-taggar** fungerar utan BookOrbit eller serverpatch.
 - **Vill läsa [BookOrbit]** använder den vanliga anslutna BookOrbit-klienten och
   visar matchade böcker som redan finns på enheten. Ingen extra patch behövs.
-- **Taggar via nätet** kräver det experimentella server-API:t i
-  [tagg-guiden](server-support/tag-matches-v1/README.md). Det söker bara bland
+- **Taggar via nätet** kräver det valfria server-API:t i
+  [3.6.0-guiden](server-support/bookorbit-3.6.0/README.md). Det söker bara bland
   angivna, kopplade lokala böcker i alla profiler. Taggar och genrer blandas inte.
 - **Ångra öppning** kräver både enhetspatchen och en kompatibel serverutökning.
-  Överlägget här gäller **enbart BookOrbit 3.2.0**. Det är inte en universell
-  uppdatering. Taggpatchen har en annan bas; kombinera dem inte utan granskad
-  anpassning och tester.
+  Det nya paketet gäller **exakt officiella BookOrbit 3.6.0** och kan kombineras
+  med tagg-API:t på samma bas. Det är inte en universell patch för 3.2.0 eller
+  senare. Det gamla kompilerade 3.2.0-överlägget är separat och får inte användas.
 - **Hardcover-patchen** låter BookOrbit vara den enda automatiska skrivaren.
   Länkning, editioner, metadata och uttryckliga manuella val finns kvar i det
   separata Hardcover-pluginet. Gamla dubbla läsningar tas inte bort.
@@ -151,7 +163,9 @@ gäller en oläst bok före första sidvändningen, inom 24 timmar, inte all lä
 
 **Servern:** Be administratören följa rätt versionsspecifik guide, testa i en
 isolerad miljö och verifiera databasbackup innan driftsättning. Den gamla
-3.2.0-bilden får inte läggas ovanpå en nyare server. En OrbitUI-uppdatering
+egna 3.2.0-databasen behöver en separat granskad uppgradering; den nya kontrollen
+stoppar migrationskollisionen innan historiken ändras. Radera inga tabeller eller
+hashar för att kringgå stoppet. 3.2.0-bilden får inte läggas ovanpå en nyare server. En OrbitUI-uppdatering
 installerar aldrig serverstöd. Bevara upphovsrätt, licenser, modifieringsnotis
 och fullständig källkod för den version som faktiskt körs. Inga produktionsdata
 har ändrats genom att den här samlingen skapades.

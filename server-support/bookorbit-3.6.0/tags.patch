@@ -1,0 +1,352 @@
+diff --git a/koreader-plugin/README.md b/koreader-plugin/README.md
+index 92b175a..b1f021b 100644
+--- a/koreader-plugin/README.md
++++ b/koreader-plugin/README.md
+@@ -82,6 +82,14 @@ Position-only bookmarks (dogears) sync the same way:
+ 
+ New bookmarks retain their source file. Mapping into a structurally different sibling requires equivalent chapter text; otherwise the bookmark remains unresolved. Legacy bookmarks without source-file provenance remain listed, but the selected-file web reader and delivery to another device withhold their position until a source-device sync or a new bookmark request establishes it. Device-side renames update BookOrbit; an already-linked second device keeps its existing title because bookmark exchange has no edit operation.
+ 
++## Exact tag lookup for local UI integrations
++
++`GET /api/v1/koreader/plugin/catalog/tag-matches?ids=1,2&tag=...` returns `{ "bookIds": [1] }`. It uses the normal KOReader credential headers, not anonymous access. Both parameters are mandatory: 1 to 200 positive safe-integer book IDs and a literal tag name of 1 to 200 characters. Invalid ID members and unknown query fields are rejected, not silently dropped. Tag matching is case-sensitive equality, not substring or genre/collection matching.
++
++Results are intersected with the supplied IDs, accessible libraries, present books and the authenticated user's content filters. The response selects IDs only and uses `Cache-Control: no-store`; it does not fetch details, covers or reading progress, or change any state. The caller must obtain IDs from its current-account local match maps and recheck file existence: the server cannot attest which files are on a device. Batch larger device lists rather than enumerating the remote library or fetching every book detail.
++
++Existing plugin client `query`/`request` and cancelable `runInSubprocess` methods can use this additive route. It requires a server containing this endpoint; older servers return 404. No deployment, plugin publication or database migration is part of the local implementation.
++
+ ## Limitations
+ 
+ - Web highlight changes reach a closed book only via a manual sweep or its next open.
+diff --git a/packages/types/src/koreader.ts b/packages/types/src/koreader.ts
+index 4dc2c02..e55d709 100644
+--- a/packages/types/src/koreader.ts
++++ b/packages/types/src/koreader.ts
+@@ -387,6 +387,11 @@ export interface KoreaderCatalogBookDetail extends KoreaderCatalogBookListItem {
+   seriesMembers?: KoreaderCatalogSeriesMember[];
+ }
+ 
++/** Exact tag membership, restricted to the supplied on-device book IDs. */
++export interface KoreaderCatalogTagMatches {
++  bookIds: number[];
++}
++
+ export interface KoreaderCatalogPage<T> {
+   items: T[];
+   total: number;
+diff --git a/server/src/modules/koreader/dto/koreader-catalog-query.dto.test.ts b/server/src/modules/koreader/dto/koreader-catalog-query.dto.test.ts
+index 123be00..543887b 100644
+--- a/server/src/modules/koreader/dto/koreader-catalog-query.dto.test.ts
++++ b/server/src/modules/koreader/dto/koreader-catalog-query.dto.test.ts
+@@ -2,6 +2,7 @@ import 'reflect-metadata';
+ 
+ import { plainToInstance } from 'class-transformer';
+ import { validate } from 'class-validator';
++import { ValidationPipe } from '@nestjs/common';
+ 
+ import {
+   KOREADER_CATALOG_SETTABLE_READ_STATUSES,
+@@ -9,8 +10,38 @@ import {
+   KoreaderCatalogDashboardQueryDto,
+   KoreaderCatalogSectionQueryDto,
+   KoreaderCatalogSetReadStatusDto,
++  KoreaderCatalogTagMatchesQueryDto,
+ } from './koreader-catalog-query.dto';
+ 
++describe('KoreaderCatalogTagMatchesQueryDto', () => {
++  const pipe = new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true });
++  const meta = { type: 'query' as const, metatype: KoreaderCatalogTagMatchesQueryDto };
++
++  it('validates the exact device request and preserves literal Unicode tag names', async () => {
++    await expect(pipe.transform({ ids: '2,17', tag: 'År 2026 & 日本語' }, meta)).resolves.toEqual({ ids: [2, 17], tag: 'År 2026 & 日本語' });
++    await expect(pipe.transform({ ids: Array.from({ length: 200 }, (_, i) => i + 1).join(','), tag: 'a' }, meta)).resolves.toBeDefined();
++  });
++
++  it.each([
++    {},
++    { tag: 'a' },
++    { ids: '1' },
++    { ids: '', tag: 'a' },
++    { ids: '1,no', tag: 'a' },
++    { ids: '0', tag: 'a' },
++    { ids: '-1', tag: 'a' },
++    { ids: '1.2', tag: 'a' },
++    { ids: '9007199254740992', tag: 'a' },
++    { ids: '1', tag: '' },
++    { ids: '1', tag: 'x'.repeat(201) },
++    { ids: Array.from({ length: 201 }, (_, i) => i + 1).join(','), tag: 'a' },
++    { ids: '1', tag: 'a', userId: 2 },
++    { ids: '1', tag: 'a', q: 'remote' },
++  ])('rejects missing, malformed, unbounded or extra inputs: %j', async (input) => {
++    await expect(pipe.transform(input, meta)).rejects.toThrow();
++  });
++});
++
+ // The current plugin builds its dashboard shelves from the ordinary catalog
+ // endpoints and no longer sends this parameter, but devices still on 1.4.x do,
+ // so the contract has to keep holding.
+diff --git a/server/src/modules/koreader/dto/koreader-catalog-query.dto.ts b/server/src/modules/koreader/dto/koreader-catalog-query.dto.ts
+index eaff2ef..c6a719f 100644
+--- a/server/src/modules/koreader/dto/koreader-catalog-query.dto.ts
++++ b/server/src/modules/koreader/dto/koreader-catalog-query.dto.ts
+@@ -1,5 +1,20 @@
+ import { Transform, Type } from 'class-transformer';
+-import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
++import {
++  ArrayMaxSize,
++  ArrayMinSize,
++  IsArray,
++  IsBoolean,
++  IsIn,
++  IsInt,
++  IsNumber,
++  IsOptional,
++  IsString,
++  Matches,
++  Max,
++  MaxLength,
++  Min,
++  MinLength,
++} from 'class-validator';
+ 
+ import { READ_ALOUD_DELIVERY_VARIANTS, type ReadAloudDeliveryVariant, KOREADER_DASHBOARD_SECTION_TYPES } from '@bookorbit/types';
+ import { MAX_OFFSET_ROWS } from '../../../common/constants/pagination.constants';
+@@ -62,6 +77,22 @@ function parseIdList(value: unknown): number[] | undefined {
+   return ids.length > 0 ? [...new Set(ids)] : [];
+ }
+ 
++export class KoreaderCatalogTagMatchesQueryDto {
++  @Transform(({ value }) => (typeof value === 'string' ? value.split(',').map((part: string) => (/^\d+$/.test(part) ? Number(part) : NaN)) : value))
++  @IsArray()
++  @ArrayMinSize(1)
++  @ArrayMaxSize(200)
++  @IsInt({ each: true })
++  @Min(1, { each: true })
++  @Max(Number.MAX_SAFE_INTEGER, { each: true })
++  ids!: number[];
++
++  @IsString()
++  @MinLength(1)
++  @MaxLength(200)
++  tag!: string;
++}
++
+ export class KoreaderCatalogBooksQueryDto {
+   @IsOptional()
+   @Type(() => Number)
+diff --git a/server/src/modules/koreader/koreader-catalog.controller.test.ts b/server/src/modules/koreader/koreader-catalog.controller.test.ts
+index b3de368..1584e15 100644
+--- a/server/src/modules/koreader/koreader-catalog.controller.test.ts
++++ b/server/src/modules/koreader/koreader-catalog.controller.test.ts
+@@ -13,6 +13,7 @@ function makeController() {
+       .fn()
+       .mockResolvedValue({ items: [], total: 0, page: 1, size: 20, hasNext: false, hasPrevious: false, nextUrl: null, previousUrl: null }),
+     getBookDetail: vi.fn().mockResolvedValue({ id: 10 }),
++    getTagMatches: vi.fn().mockResolvedValue({ bookIds: [10] }),
+     getDashboardSection: vi.fn().mockResolvedValue({ section: { type: 'want-to-read', smartScopeId: null, books: [] } }),
+     getBulkManifest: vi.fn().mockResolvedValue({ items: [], hasNext: false, nextCursor: null, manifestVersion: 'lib-v1', restartRequired: false }),
+     setReadStatus: vi.fn().mockResolvedValue({ readStatus: 'reading' }),
+@@ -25,6 +26,14 @@ function makeController() {
+ }
+ 
+ describe('KoreaderCatalogController', () => {
++  it('forwards tag membership with the authenticated user and no-store response', async () => {
++    const { controller, catalogService } = makeController();
++    const user = { id: 7 } as never;
++    const query = { ids: [10, 11], tag: 'Åland' };
++    await expect(controller.tagMatches(user, query)).resolves.toEqual({ bookIds: [10] });
++    expect(catalogService.getTagMatches).toHaveBeenCalledWith(user, query);
++    expect(Reflect.getMetadata('__headers__', controller.tagMatches)).toEqual([{ name: 'Cache-Control', value: 'no-store' }]);
++  });
+   it('is public only for the global JWT guard and uses the KOReader auth guard', () => {
+     expect(Reflect.getMetadata(IS_PUBLIC_KEY, KoreaderCatalogController)).toBe(true);
+     expect(Reflect.getMetadata(GUARDS_METADATA, KoreaderCatalogController)).toEqual([KoreaderAuthGuard]);
+diff --git a/server/src/modules/koreader/koreader-catalog.controller.ts b/server/src/modules/koreader/koreader-catalog.controller.ts
+index 7c9d40a..e78293f 100644
+--- a/server/src/modules/koreader/koreader-catalog.controller.ts
++++ b/server/src/modules/koreader/koreader-catalog.controller.ts
+@@ -18,6 +18,7 @@ import {
+   KoreaderCatalogSectionQueryDto,
+   KoreaderCatalogSetRatingDto,
+   KoreaderCatalogSetReadStatusDto,
++  KoreaderCatalogTagMatchesQueryDto,
+ } from './dto/koreader-catalog-query.dto';
+ 
+ @Public()
+@@ -73,6 +74,12 @@ export class KoreaderCatalogController {
+     return this.catalogService.getBulkManifest(user, query);
+   }
+ 
++  @Get('tag-matches')
++  @Header('Cache-Control', 'no-store')
++  tagMatches(@CurrentUser() user: RequestUser, @Query() query: KoreaderCatalogTagMatchesQueryDto) {
++    return this.catalogService.getTagMatches(user, query);
++  }
++
+   @Get('books/:bookId')
+   @Header('Cache-Control', 'private, max-age=30')
+   bookDetail(@CurrentUser() user: RequestUser, @Param('bookId', ParseIntPipe) bookId: number, @Query() query: KoreaderCatalogBookDetailQueryDto) {
+diff --git a/server/src/modules/koreader/koreader-catalog.service.test.ts b/server/src/modules/koreader/koreader-catalog.service.test.ts
+index 558d0ed..61c18c9 100644
+--- a/server/src/modules/koreader/koreader-catalog.service.test.ts
++++ b/server/src/modules/koreader/koreader-catalog.service.test.ts
+@@ -193,6 +193,7 @@ function makeService(
+     getBookJumpBuckets: vi.fn().mockResolvedValue([]),
+     findVisibleAuthor: vi.fn().mockResolvedValue(null),
+     getBooksPage: vi.fn().mockResolvedValue({ entries: [], total: 0 }),
++    getBookIdsWithTag: vi.fn().mockResolvedValue([10]),
+     countBooks: vi.fn().mockResolvedValue(99),
+     countUserCollections: vi.fn().mockResolvedValue(1),
+     countUserSmartScopes: vi.fn().mockResolvedValue(1),
+@@ -370,6 +371,23 @@ function makeService(
+ }
+ 
+ describe('KoreaderCatalogService', () => {
++  it('looks up exact tags in one bounded ID batch without hydrating book details or reading state', async () => {
++    const { service, opdsBookService, bookService, bookReadService, userBookStatusService } = makeService();
++    const user = makeUser({ id: 7 });
++    await expect(service.getTagMatches(user, { ids: [10, 11, 10], tag: 'Åland' })).resolves.toEqual({ bookIds: [10] });
++    expect(opdsBookService.getBookIdsWithTag).toHaveBeenCalledWith(7, [10, 11], 'Åland', user.isSuperuser, user.contentFilters);
++    expect(bookService.getDetail).not.toHaveBeenCalled();
++    expect(bookReadService.findProgressByBooks).not.toHaveBeenCalled();
++    expect(userBookStatusService.setManual).not.toHaveBeenCalled();
++  });
++
++  it('refuses unbounded direct service calls as well as invalid DTOs', async () => {
++    const { service, opdsBookService } = makeService();
++    for (const ids of [[], [0], [NaN], [Number.MAX_SAFE_INTEGER + 1], Array.from({ length: 201 }, (_, i) => i + 1)]) {
++      await expect(service.getTagMatches(makeUser(), { ids, tag: 'a' })).rejects.toThrow(BadRequestException);
++    }
++    expect(opdsBookService.getBookIdsWithTag).not.toHaveBeenCalled();
++  });
+   beforeEach(() => {
+     vi.clearAllMocks();
+     mockStat.mockResolvedValue({ size: 1234, mtimeMs: 5000 } as never);
+diff --git a/server/src/modules/koreader/koreader-catalog.service.ts b/server/src/modules/koreader/koreader-catalog.service.ts
+index dda36b3..58242a9 100644
+--- a/server/src/modules/koreader/koreader-catalog.service.ts
++++ b/server/src/modules/koreader/koreader-catalog.service.ts
+@@ -52,6 +52,7 @@ import type {
+   KoreaderCatalogSettableReadStatus,
+   KoreaderCatalogSort,
+   KoreaderCatalogSortOrder,
++  KoreaderCatalogTagMatches,
+ } from '@bookorbit/types';
+ import { MAX_OFFSET_ROWS, isOffsetWithinLimit } from '../../common/constants/pagination.constants';
+ import { mapWithConcurrency } from '../../common/utils/batch.utils';
+@@ -81,7 +82,7 @@ import type {
+ } from '../opds/opds-book.service';
+ import { RecommendationService } from '../recommendation/recommendation.service';
+ import { UserBookStatusService } from '../user-book-status/user-book-status.service';
+-import { KoreaderCatalogBooksQueryDto, KoreaderCatalogManifestQueryDto } from './dto/koreader-catalog-query.dto';
++import { KoreaderCatalogBooksQueryDto, KoreaderCatalogManifestQueryDto, KoreaderCatalogTagMatchesQueryDto } from './dto/koreader-catalog-query.dto';
+ import { AppSettingsService } from '../app-settings/app-settings.service';
+ import { KoreaderPluginService } from './koreader-plugin.service';
+ import { KoreaderService } from './koreader.service';
+@@ -452,6 +453,22 @@ export class KoreaderCatalogService {
+     return this.loadBooksPage(user, query, await this.resolveVisibility(user));
+   }
+ 
++  async getTagMatches(user: RequestUser, query: KoreaderCatalogTagMatchesQueryDto): Promise<KoreaderCatalogTagMatches> {
++    if (
++      !Array.isArray(query.ids) ||
++      query.ids.length < 1 ||
++      query.ids.length > 200 ||
++      query.ids.some((id) => !Number.isSafeInteger(id) || id < 1) ||
++      typeof query.tag !== 'string' ||
++      !query.tag.length ||
++      [...query.tag].length > 200
++    ) {
++      throw new BadRequestException('A tag and 1 to 200 valid book IDs are required');
++    }
++    const bookIds = await this.opdsBookService.getBookIdsWithTag(user.id, [...new Set(query.ids)], query.tag, user.isSuperuser, user.contentFilters);
++    return { bookIds };
++  }
++
+   private async loadBooksPage(
+     user: RequestUser,
+     query: KoreaderCatalogBooksQueryDto,
+diff --git a/server/src/modules/opds/__tests__/opds-book.service.test.ts b/server/src/modules/opds/__tests__/opds-book.service.test.ts
+index e78f20c..bed2d93 100644
+--- a/server/src/modules/opds/__tests__/opds-book.service.test.ts
++++ b/server/src/modules/opds/__tests__/opds-book.service.test.ts
+@@ -95,6 +95,34 @@ function collectValues(value: unknown, seen = new WeakSet<object>()): unknown[]
+ }
+ 
+ describe('OpdsBookService', () => {
++  it('uses exact parameterized tag membership, requested IDs, access and content filters in one select', async () => {
++    const { service, db } = makeService();
++    db.select.mockImplementation((fields) => makeChain(fields && 'id' in fields ? [{ id: 2 }] : [], fields));
++    vi.spyOn(service, 'getAccessibleLibraryIds').mockResolvedValue([55]);
++    const tag = "Åland%' OR true --";
++    const filters = { ...EMPTY_CONTENT_FILTER_RULES, excludeTagIds: [12] };
++    await expect(service.getBookIdsWithTag(7, [2, 3], tag, false, filters)).resolves.toEqual([2]);
++    const chains = selectChains(db);
++    const [membership, result] = chains.slice(-2);
++    const exact = renderSql(membership!.where.mock.calls[0]![0]);
++    expect(exact.sql).toContain('"tags"."name" = $1');
++    expect(exact.params).toEqual([tag]);
++    expect(exact.sql).not.toContain(tag);
++    const scope = collectValues(result!.where.mock.calls[0]![0]);
++    expect(scope).toEqual(expect.arrayContaining([55, 2, 3, 'present', chains[0]!.where]));
++    expect(renderSql(chains[0]!.where.mock.calls[0]![0]).params).toEqual([12]);
++    expect(Object.keys(selectFields(db, db.select.mock.calls.length - 1))).toEqual(['id']);
++    expect(result!.limit).toHaveBeenCalledWith(200);
++    expect(service.getAccessibleLibraryIds).toHaveBeenCalledWith(7, false);
++  });
++
++  it('never broadens an empty ID batch or a user without access to any library', async () => {
++    const { service, db } = makeService();
++    vi.spyOn(service, 'getAccessibleLibraryIds').mockResolvedValue([]);
++    await expect(service.getBookIdsWithTag(7, [], 'a')).resolves.toEqual([]);
++    await expect(service.getBookIdsWithTag(7, [2], 'a')).resolves.toEqual([]);
++    expect(db.select).not.toHaveBeenCalled();
++  });
+   it('returns accessible library ids for superusers and regular users', async () => {
+     const superDb = makeDb([[{ id: 1 }, { id: 4 }]]);
+     const superService = new OpdsBookService(superDb as never, {} as never, new OpdsCollectionRepository(superDb as never));
+diff --git a/server/src/modules/opds/opds-book.service.ts b/server/src/modules/opds/opds-book.service.ts
+index 704e435..c3b3f4b 100644
+--- a/server/src/modules/opds/opds-book.service.ts
++++ b/server/src/modules/opds/opds-book.service.ts
+@@ -10,6 +10,7 @@ import {
+   bookAuthors,
+   bookFiles,
+   bookMetadata,
++  bookTags,
+   bookSeries,
+   bookSeriesMemberships,
+   books,
+@@ -19,6 +20,7 @@ import {
+   readingProgress,
+   userBookStatus,
+   userLibraryAccess,
++  tags,
+ } from '../../db/schema';
+ import { BookQueryBuilder } from '../book/book-query-builder.service';
+ import { isAudioFormat, type ContentFilterRules, type GroupRule } from '@bookorbit/types';
+@@ -340,6 +342,25 @@ export class OpdsBookService {
+     return this.paginatedBookQuery(scope.where, sortOrder, page, size, userId, { contextSeries: scope.contextSeries, offset });
+   }
+ 
++  async getBookIdsWithTag(userId: number, ids: number[], tag: string, isSuperuser = false, contentFilters?: ContentFilterRules): Promise<number[]> {
++    if (!ids.length) return [];
++    const scope = await this.buildCatalogScope(userId, { ids }, isSuperuser, contentFilters);
++    if (!scope) return [];
++    const membership = this.db
++      .select({ one: sql`1` })
++      .from(bookTags)
++      .innerJoin(tags, eq(tags.id, bookTags.tagId))
++      .where(and(eq(bookTags.bookId, books.id), eq(tags.name, tag)));
++    const rows = await this.db
++      .select({ id: books.id })
++      .from(books)
++      .leftJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
++      .where(and(scope.where, exists(membership)))
++      .orderBy(books.id)
++      .limit(200);
++    return rows.map((row) => row.id);
++  }
++
+   // Resolves authorization and every catalog filter into one where clause. The
+   // interactive list and the bulk manifest share it so their membership cannot
+   // drift apart. Returns null when the scope is provably empty.

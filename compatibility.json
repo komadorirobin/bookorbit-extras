@@ -1,5 +1,5 @@
 {
-  "collectionVersion": "0.1.0",
+  "collectionVersion": "0.2.0",
   "assembledAt": "2026-10-31",
   "official": false,
   "deviceSource": {
@@ -11,6 +11,7 @@
     }
   },
   "undoOpeningV1": {
+    "legacy": true,
     "serverBase": "d1b3fae7f701ba5e0e95192804aeec95ad49353b",
     "serverVersion": "3.2.0",
     "patch": "server-support/bookorbit-undo-opening/server.patch",
@@ -22,6 +23,7 @@
     }
   },
   "tagMatchesV1": {
+    "legacySourceBase": true,
     "experimental": true,
     "serverBase": "ba315c77182f0f28030140e342d93294cc512637",
     "localImplementation": "0cf7db16f1059049820f36dc0fe4022ea52a630b",
@@ -30,6 +32,28 @@
     "migrationRequired": false
   },
   "hardcoverRegressionSource": "https://github.com/Billiam/hardcoverapp.koplugin/tree/fa352e777e96e983dd43b35ed6d83f89531a196c",
-  "serverPatchesAreNotCombined": true,
+  "stableServer": {
+    "serverVersion": "3.6.0",
+    "serverBase": "a96ff0c85a4c25e9126dfa4c71ea87537a3baf7a",
+    "release": "https://github.com/bookorbit/bookorbit/releases/tag/v3.6.0",
+    "latestOfficialReleaseCheckedAt": "2026-10-31",
+    "guide": "server-support/bookorbit-3.6.0/README.md",
+    "undo": {
+      "patch": "server-support/bookorbit-3.6.0/undo.patch",
+      "sha256": "b194b425cd85050561016fd7d51de91776ba0ade9416775abbd6f43c69c2fee8",
+      "localImplementation": "52c0a3a18ff8058fb8adc1179e506389a17665e0",
+      "migration": "0132_undo_reading_opening",
+      "legacyCustomDatabaseAutomaticUpgrade": false
+    },
+    "tags": {
+      "patch": "server-support/bookorbit-3.6.0/tags.patch",
+      "sha256": "fc5ecaad1c6177b3162e8a60aa29f6064363e964c1706120b2d46d6f45bd977d",
+      "localImplementation": "3c39bdd8e4ce68c7d10abc30d76cc03eea9bbac8",
+      "migrationRequired": false
+    },
+    "composable": true,
+    "futureVersionsSupported": false
+  },
+  "legacyServerPatchesHaveDifferentBases": true,
   "automaticDeployment": false
 }

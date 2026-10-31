@@ -1,5 +1,9 @@
 # BookOrbit undo-opening server support
 
+**Legacy 3.2.0 artifact. For the reviewed official 3.6.0 port, use the
+[version-specific guide](../bookorbit-3.6.0/README.md). Do not reuse this compiled
+overlay on 3.6.0 or migrate an old custom database without a reviewed plan.**
+
 This directory contains the server-side companion to
 [`2-bookorbit-undo-opening.lua`](../../2-bookorbit-undo-opening.lua).
 The KOReader plugin itself stays unmodified. This is a patch against BookOrbit

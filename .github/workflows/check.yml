@@ -48,3 +48,67 @@ jobs:
               subprocess.run(['tar', '-xzf', str(archive), '-C', str(target), '--strip-components=1'], check=True)
               subprocess.run(['git', '-C', str(target), 'apply', '--check', str(root / entry['patch'])], check=True)
           PY
+  stable-server:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        features: [undo, tags, both]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: orbitui_test
+          POSTGRES_PASSWORD: isolated-ci-fixture
+          POSTGRES_DB: bookorbit_undo_test
+        ports:
+          - 5432/tcp
+        options: >-
+          --health-cmd "pg_isready -U orbitui_test -d bookorbit_undo_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: bookorbit/bookorbit
+          ref: a96ff0c85a4c25e9126dfa4c71ea87537a3baf7a
+          path: upstream
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.22.0'
+      - name: Install exact upstream dependencies
+        working-directory: upstream
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Prepare official database before the extension upgrade
+        working-directory: upstream
+        env:
+          DATABASE_URL: postgres://orbitui_test:isolated-ci-fixture@127.0.0.1:${{ job.services.postgres.ports[5432] }}/bookorbit_undo_test
+        run: pnpm --dir server exec tsx src/scripts/migrate.ts
+      - name: Verify helper safety and complete source archive
+        if: matrix.features == 'both'
+        env:
+          BOOKORBIT_SOURCE_REPO: ${{ github.workspace }}/upstream
+        run: python3 -m unittest discover -s tests -p 'test_prepare_source.py'
+      - name: Prepare pinned source with selected extras
+        run: python3 server-support/bookorbit-3.6.0/prepare-source.py upstream --features ${{ matrix.features }}
+      - name: Compile and test the selected server build
+        working-directory: upstream
+        env:
+          OPENING_TEST_DATABASE_URL: postgres://orbitui_test:isolated-ci-fixture@127.0.0.1:${{ job.services.postgres.ports[5432] }}/bookorbit_undo_test
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --dir server type-check
+          NODE_OPTIONS=--max-old-space-size=6144 pnpm --dir server lint:check
+          pnpm --dir server build
+          if [ '${{ matrix.features }}' != 'tags' ]; then
+            DATABASE_URL="$OPENING_TEST_DATABASE_URL" pnpm --dir server exec tsx src/scripts/migrate.ts
+            DATABASE_URL="$OPENING_TEST_DATABASE_URL" pnpm --dir server exec tsx src/scripts/migrate.ts
+          fi
+          pnpm --dir server exec vitest run --maxWorkers=2 src/modules/koreader src/modules/user-book-status src/modules/hardcover src/modules/opds src/scripts/opening-migration-preflight.test.ts

@@ -9,10 +9,16 @@ expected = dict(manifest["deviceSource"]["files"])
 for key in ("undoOpeningV1", "tagMatchesV1"):
     entry = manifest[key]
     expected[entry["patch"]] = entry["sha256"]
+for key in ("undo", "tags"):
+    entry = manifest["stableServer"][key]
+    expected[entry["patch"]] = entry["sha256"]
 for name, digest in expected.items():
     assert hashlib.sha256((root / name).read_bytes()).hexdigest() == digest, name
 for name in ("LICENSE", "NOTICE", "ADDITIONAL_TERMS.md"):
     assert (root / "licenses/bookorbit" / name).stat().st_size > 100, name
-assert manifest["serverPatchesAreNotCombined"] is True
+assert manifest["legacyServerPatchesHaveDifferentBases"] is True
+assert manifest["stableServer"]["composable"] is True
+assert manifest["stableServer"]["futureVersionsSupported"] is False
+assert manifest["stableServer"]["undo"]["legacyCustomDatabaseAutomaticUpgrade"] is False
 assert manifest["automaticDeployment"] is False
-print("PASS: four pinned artifacts, notices, independent bases and no deployment")
+print("PASS: six pinned artifacts, notices, exact stable base, legacy separation and no deployment")
