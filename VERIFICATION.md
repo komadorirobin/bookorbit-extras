@@ -1,5 +1,35 @@
 # Verification record
 
+## Local reading-status API follow-up, 2026-11-01
+
+Not published or deployed. User explicitly authorizes local implementation,
+not a running server change. `status.patch` targets exact official 3.6.0
+`a96ff0c85a4c25e9126dfa4c71ea87537a3baf7a`, local implementation
+`6cb2feb2938d564b3bade449f649d885a91e49b1`. Patch SHA-256:
+`ba588d41ee7323b5b46ff0e3603294ed7dbbcc0e46d3a56c34a58a45a8d24bbd`.
+
+- GET-only, native KOReader auth, mandatory explicit batches of 1..200 safe
+  IDs, strict extra-field rejection and no-store. Canonical status update and
+  finish timestamps; missing/inaccessible/filtered rows are omitted.
+- Status-only exact-source DTO/controller/service/SQL tests: **194 passing**.
+  Combined undo+tags+status Koreader/OPDS suites: **1,058 passing in 44 files**.
+  Server typecheck and targeted ESLint pass for standalone and combined source.
+- Six source-helper integration tests pass, including status-only without
+  migrations, unchanged `both`, all-three atomic composition, complete-source
+  archive, dirty-checkout and existing-archive refusal. Checksums pass.
+- No schema or migration change in this addition, no detail/progress/cover
+  hydration, no API write or Hardcover call. No production database,
+  credentials, Docker service or server image is touched.
+- OrbitUI's local importer has separate synthetic 3,000-match, stale-state,
+  cancellation, conflict and native payload acknowledgement tests. It is
+  disabled by default. Physical Bigme latency/UI and live fixture round-trip
+  remain pending because ADB is disconnected.
+
+Local evidence is under `/tmp/orbitui-status-api.9FBdOz/`; OrbitUI's durable
+local test record is `test-results/status-import-20261101/` in its checkout.
+Any deployment still requires explicit approval, backup/restore verification,
+an exact complete-source image and the existing licensing/source-offer steps.
+
 ## Same-cover reload fix, collection 0.2.1
 
 Checked locally 2026-11-01. The device Undo patch and its mirrored Ereader copy

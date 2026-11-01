@@ -51,6 +51,20 @@ class PrepareSourceTest(unittest.TestCase):
         self.assertEqual(marker.read_text(), "Do not overwrite")
         self.assertFalse((self.target / "server/src/db/schema/reading-openings.ts").exists())
 
+    def test_status_only_is_read_only_without_undo_or_tag_dependencies(self):
+        self.helper("--features", "status")
+        controller = (self.target / "server/src/modules/koreader/koreader-catalog.controller.ts").read_text()
+        self.assertIn("@Get('read-statuses')", controller)
+        self.assertNotIn("tag-matches", controller)
+        self.assertFalse((self.target / "server/src/db/migrations/0132_undo_reading_opening.sql").exists())
+
+    def test_all_three_patches_compose_in_one_verified_application(self):
+        self.helper("--features", "all")
+        controller = (self.target / "server/src/modules/koreader/koreader-catalog.controller.ts").read_text()
+        self.assertIn("@Get('read-statuses')", controller)
+        self.assertIn("tag-matches", controller)
+        self.assertTrue((self.target / "server/src/db/migrations/0132_undo_reading_opening.sql").exists())
+
     def test_existing_archive_is_not_overwritten(self):
         archive = self.root / "existing.tar.gz"
         archive.write_bytes(b"keep")

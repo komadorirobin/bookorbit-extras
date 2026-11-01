@@ -18,7 +18,7 @@ def git(checkout, *args, **kwargs):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("checkout", type=Path)
-    parser.add_argument("--features", choices=("undo", "tags", "both"), default="both")
+    parser.add_argument("--features", choices=("undo", "tags", "both", "status", "all"), default="both")
     parser.add_argument("--source-archive", type=Path,
                         help="Create full corresponding source outside the checkout (not only a diff)")
     args = parser.parse_args()
@@ -31,7 +31,8 @@ def main():
         parser.error("Wrong source revision. Only the pinned official 3.6.0 commit is supported.")
     if git(checkout, "status", "--porcelain").strip():
         parser.error("Use a separate clean checkout. No existing work will be overwritten.")
-    names = ("undo", "tags") if args.features == "both" else (args.features,)
+    names = (("undo", "tags", "status") if args.features == "all" else
+             ("undo", "tags") if args.features == "both" else (args.features,))
     payload = bytearray()
     for name in names:
         entry = release[name]

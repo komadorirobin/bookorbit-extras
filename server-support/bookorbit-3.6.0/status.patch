@@ -1,0 +1,250 @@
+diff --git a/packages/types/src/koreader.ts b/packages/types/src/koreader.ts
+index 4dc2c02c..2afd2df6 100644
+--- a/packages/types/src/koreader.ts
++++ b/packages/types/src/koreader.ts
+@@ -360,6 +360,12 @@ export interface KoreaderCatalogRelatedSection {
+   books: KoreaderCatalogRelatedBook[];
+ }
+ 
++/** Read-only status projection restricted to supplied device match IDs. */
++export interface KoreaderReadStatuses {
++  version: 1;
++  items: { id: number; status: string; updatedAt: string; finishedAt: string | null }[];
++}
++
+ export interface KoreaderCatalogBookDetail extends KoreaderCatalogBookListItem {
+   subtitle: string | null;
+   description: string | null;
+diff --git a/server/src/modules/koreader/dto/koreader-read-statuses-query.dto.test.ts b/server/src/modules/koreader/dto/koreader-read-statuses-query.dto.test.ts
+new file mode 100644
+index 00000000..2936ddf4
+--- /dev/null
++++ b/server/src/modules/koreader/dto/koreader-read-statuses-query.dto.test.ts
+@@ -0,0 +1,26 @@
++import 'reflect-metadata';
++import { ValidationPipe } from '@nestjs/common';
++import { KoreaderReadStatusesQueryDto } from './koreader-read-statuses-query.dto';
++
++describe('KoreaderReadStatusesQueryDto', () => {
++  const pipe = new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true });
++  const meta = { type: 'query' as const, metatype: KoreaderReadStatusesQueryDto };
++  it('requires a bounded explicit device ID batch', async () => {
++    await expect(pipe.transform({ ids: '2,17' }, meta)).resolves.toEqual({ ids: [2, 17] });
++    await expect(pipe.transform({ ids: Array.from({ length: 200 }, (_, i) => i + 1).join(',') }, meta)).resolves.toBeDefined();
++  });
++  it.each([
++    {},
++    { ids: '' },
++    { ids: '1,no' },
++    { ids: '0' },
++    { ids: '-1' },
++    { ids: '1.2' },
++    { ids: '9007199254740992' },
++    { ids: Array.from({ length: 201 }, (_, i) => i + 1).join(',') },
++    { ids: '1', userId: 2 },
++    { ids: '1', q: 'all' },
++  ])('rejects unbounded or malformed inputs: %j', async (input) => {
++    await expect(pipe.transform(input, meta)).rejects.toThrow();
++  });
++});
+diff --git a/server/src/modules/koreader/dto/koreader-read-statuses-query.dto.ts b/server/src/modules/koreader/dto/koreader-read-statuses-query.dto.ts
+new file mode 100644
+index 00000000..cde906e6
+--- /dev/null
++++ b/server/src/modules/koreader/dto/koreader-read-statuses-query.dto.ts
+@@ -0,0 +1,13 @@
++import { Transform } from 'class-transformer';
++import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, Max, Min } from 'class-validator';
++
++export class KoreaderReadStatusesQueryDto {
++  @Transform(({ value }) => (typeof value === 'string' ? value.split(',').map((part: string) => (/^\d+$/.test(part) ? Number(part) : NaN)) : value))
++  @IsArray()
++  @ArrayMinSize(1)
++  @ArrayMaxSize(200)
++  @IsInt({ each: true })
++  @Min(1, { each: true })
++  @Max(Number.MAX_SAFE_INTEGER, { each: true })
++  ids!: number[];
++}
+diff --git a/server/src/modules/koreader/koreader-catalog.controller.test.ts b/server/src/modules/koreader/koreader-catalog.controller.test.ts
+index b3de368a..a570a816 100644
+--- a/server/src/modules/koreader/koreader-catalog.controller.test.ts
++++ b/server/src/modules/koreader/koreader-catalog.controller.test.ts
+@@ -20,6 +20,7 @@ function makeController() {
+     streamThumbnail: vi.fn().mockResolvedValue(undefined),
+     streamAuthorPhoto: vi.fn().mockResolvedValue(undefined),
+     streamFile: vi.fn().mockResolvedValue(undefined),
++    getReadStatuses: vi.fn().mockResolvedValue({ version: 1, items: [] }),
+   };
+   return { controller: new KoreaderCatalogController(catalogService as never), catalogService };
+ }
+@@ -83,6 +84,14 @@ describe('KoreaderCatalogController', () => {
+     expect(catalogService.getDashboard).toHaveBeenCalledWith(user, { type: 'smart-scope', smartScopeId: 3 });
+   });
+ 
++  it('forwards the authenticated GET-only status projection with no-store', async () => {
++    const { controller, catalogService } = makeController();
++    const user = { id: 7 } as never;
++    await expect(controller.readStatuses(user, { ids: [10] })).resolves.toEqual({ version: 1, items: [] });
++    expect(catalogService.getReadStatuses).toHaveBeenCalledWith(user, { ids: [10] });
++    expect(Reflect.getMetadata('__headers__', controller.readStatuses)).toEqual([{ name: 'Cache-Control', value: 'no-store' }]);
++    expect(Reflect.getMetadata('method', controller.readStatuses)).toBe(0);
++  });
+   it('forwards the single-section refresh route', async () => {
+     const { controller, catalogService } = makeController();
+     const user = { id: 7 } as never;
+diff --git a/server/src/modules/koreader/koreader-catalog.controller.ts b/server/src/modules/koreader/koreader-catalog.controller.ts
+index 7c9d40a3..154287ee 100644
+--- a/server/src/modules/koreader/koreader-catalog.controller.ts
++++ b/server/src/modules/koreader/koreader-catalog.controller.ts
+@@ -1,3 +1,4 @@
++import { KoreaderReadStatusesQueryDto } from './dto/koreader-read-statuses-query.dto';
+ import { Body, Controller, Get, Header, Headers, Param, ParseEnumPipe, ParseIntPipe, Put, Query, Res, UseGuards } from '@nestjs/common';
+ import type { FastifyReply } from 'fastify';
+ 
+@@ -32,6 +33,12 @@ export class KoreaderCatalogController {
+     return this.catalogService.getRoot();
+   }
+ 
++  @Get('read-statuses')
++  @Header('Cache-Control', 'no-store')
++  readStatuses(@CurrentUser() user: RequestUser, @Query() query: KoreaderReadStatusesQueryDto) {
++    return this.catalogService.getReadStatuses(user, query);
++  }
++
+   @Get('dashboard')
+   @Header('Cache-Control', 'private, max-age=30')
+   dashboard(@CurrentUser() user: RequestUser, @Query() query: KoreaderCatalogDashboardQueryDto) {
+diff --git a/server/src/modules/koreader/koreader-catalog.service.test.ts b/server/src/modules/koreader/koreader-catalog.service.test.ts
+index 558d0eda..4f9b00f2 100644
+--- a/server/src/modules/koreader/koreader-catalog.service.test.ts
++++ b/server/src/modules/koreader/koreader-catalog.service.test.ts
+@@ -203,6 +203,11 @@ function makeService(
+     countVisibleSeries: vi.fn().mockResolvedValue(0),
+     findAudioOnlyLibraryIds: vi.fn().mockResolvedValue([]),
+     findAudioOnlyBookIds: vi.fn().mockResolvedValue(new Set<number>()),
++    getReadStatusesForIds: vi
++      .fn()
++      .mockResolvedValue([
++        { id: 10, status: 'read', updatedAt: new Date('2026-10-31T12:00:00.000Z'), finishedAt: new Date('2026-10-30T00:00:00.000Z') },
++      ]),
+   };
+   const bookService = {
+     getDetail: vi.fn().mockResolvedValue(makeDetail()),
+@@ -2465,6 +2470,27 @@ describe('KoreaderCatalogService for a reader hiding audiobook-only books', () =
+     expect(detail.relatedSections).toEqual([expect.objectContaining({ id: 'author', books: [expect.objectContaining({ id: 12 })] })]);
+   });
+ 
++  it('projects canonical status timestamps without detail, progress or mutation calls', async () => {
++    const { service, opdsBookService, bookService, bookReadService, userBookStatusService } = makeService();
++    const user = makeUser({ id: 7 });
++    await expect(service.getReadStatuses(user, { ids: [10, 11, 10] })).resolves.toEqual({
++      version: 1,
++      items: [{ id: 10, status: 'read', updatedAt: '2026-10-31T12:00:00.000Z', finishedAt: '2026-10-30T00:00:00.000Z' }],
++    });
++    expect(opdsBookService.getReadStatusesForIds).toHaveBeenCalledWith(7, [10, 11], user.isSuperuser, user.contentFilters);
++    expect(bookService.getDetail).not.toHaveBeenCalled();
++    expect(bookReadService.findProgressByBooks).not.toHaveBeenCalled();
++    expect(userBookStatusService.setManual).not.toHaveBeenCalled();
++  });
++  it('rejects unsafe direct service batches and does not synthesize missing statuses', async () => {
++    const { service, opdsBookService } = makeService();
++    for (const ids of [[], [0], [NaN], [Number.MAX_SAFE_INTEGER + 1], Array.from({ length: 201 }, (_, i) => i + 1)]) {
++      await expect(service.getReadStatuses(makeUser(), { ids })).rejects.toThrow(BadRequestException);
++    }
++    expect(opdsBookService.getReadStatusesForIds).not.toHaveBeenCalled();
++    opdsBookService.getReadStatusesForIds.mockResolvedValueOnce([]);
++    await expect(service.getReadStatuses(makeUser(), { ids: [10] })).resolves.toEqual({ version: 1, items: [] });
++  });
+   it('looks up no related books for a reader who sees them', async () => {
+     const { service, opdsBookService } = makeService();
+ 
+diff --git a/server/src/modules/koreader/koreader-catalog.service.ts b/server/src/modules/koreader/koreader-catalog.service.ts
+index dda36b37..3c90acea 100644
+--- a/server/src/modules/koreader/koreader-catalog.service.ts
++++ b/server/src/modules/koreader/koreader-catalog.service.ts
+@@ -1,3 +1,5 @@
++import type { KoreaderReadStatuses } from '@bookorbit/types';
++import { KoreaderReadStatusesQueryDto } from './dto/koreader-read-statuses-query.dto';
+ import { createHash } from 'crypto';
+ import { createReadStream } from 'fs';
+ import { stat } from 'fs/promises';
+@@ -235,6 +237,22 @@ export class KoreaderCatalogService {
+     return { sections: ROOT_SECTIONS.map((section) => ({ ...section })) };
+   }
+ 
++  async getReadStatuses(user: RequestUser, query: KoreaderReadStatusesQueryDto): Promise<KoreaderReadStatuses> {
++    if (!Array.isArray(query.ids) || !query.ids.length || query.ids.length > 200 || query.ids.some((id) => !Number.isSafeInteger(id) || id < 1)) {
++      throw new BadRequestException('Expected 1 to 200 positive safe-integer book IDs');
++    }
++    const rows = await this.opdsBookService.getReadStatusesForIds(user.id, [...new Set(query.ids)], user.isSuperuser, user.contentFilters);
++    return {
++      version: 1,
++      items: rows.map((row) => ({
++        id: row.id,
++        status: row.status,
++        updatedAt: row.updatedAt.toISOString(),
++        finishedAt: row.finishedAt?.toISOString() ?? null,
++      })),
++    };
++  }
++
+   async getDashboard(user: RequestUser, section?: KoreaderDashboardSectionConfig): Promise<KoreaderCatalogDashboardResponse> {
+     const visibility = await this.resolveVisibility(user);
+     const continueReadingQuery = Object.assign(new KoreaderCatalogBooksQueryDto(), {
+diff --git a/server/src/modules/opds/__tests__/opds-book.service.test.ts b/server/src/modules/opds/__tests__/opds-book.service.test.ts
+index e78f20cf..578a2219 100644
+--- a/server/src/modules/opds/__tests__/opds-book.service.test.ts
++++ b/server/src/modules/opds/__tests__/opds-book.service.test.ts
+@@ -105,6 +105,26 @@ describe('OpdsBookService', () => {
+     await expect(userService.getAccessibleLibraryIds(7, false)).resolves.toEqual([2, 3]);
+   });
+ 
++  it('restricts status reads to this user, present accessible books and literal supplied IDs', async () => {
++    const { service, db } = makeService([[{ id: 2, status: 'read' }]]);
++    vi.spyOn(service, 'getAccessibleLibraryIds').mockResolvedValue([4]);
++    await expect(service.getReadStatusesForIds(7, [2, 3])).resolves.toEqual([{ id: 2, status: 'read' }]);
++    const chain = selectChains(db)[0]!;
++    const where = renderSql(chain.where.mock.calls[0]![0]);
++    expect(where.params).toContain('present');
++    expect(where.params).toContain(4);
++    expect(where.params).toContain(2);
++    expect(where.params).toContain(3);
++    const join = renderSql(chain.innerJoin.mock.calls[0]![1]);
++    expect(join.params).toContain(7);
++    expect(join.sql).toContain('user_id');
++    expect(Object.keys(selectFields(db, 0))).toEqual(['id', 'status', 'updatedAt', 'finishedAt']);
++    expect(chain.limit).toHaveBeenCalledWith(200);
++    await expect(service.getReadStatusesForIds(7, [])).resolves.toEqual([]);
++    vi.mocked(service.getAccessibleLibraryIds).mockResolvedValue([]);
++    await expect(service.getReadStatusesForIds(7, [2])).resolves.toEqual([]);
++    expect(db.select).toHaveBeenCalledTimes(1);
++  });
+   it('handles getBooksPage access checks and smartScope delegation', async () => {
+     const { service } = makeService([[{ userId: 999, isPublic: false, mediaType: 'books' }], [{ userId: 7, isPublic: false, mediaType: 'books' }]]);
+     const accessSpy = vi.spyOn(service, 'getAccessibleLibraryIds');
+diff --git a/server/src/modules/opds/opds-book.service.ts b/server/src/modules/opds/opds-book.service.ts
+index 704e435c..1a56fa29 100644
+--- a/server/src/modules/opds/opds-book.service.ts
++++ b/server/src/modules/opds/opds-book.service.ts
+@@ -324,6 +324,20 @@ export class OpdsBookService {
+       .orderBy(libraries.name);
+   }
+ 
++  async getReadStatusesForIds(userId: number, ids: number[], isSuperuser = false, contentFilters?: ContentFilterRules) {
++    if (!ids.length) return [];
++    const scope = await this.buildCatalogScope(userId, { ids }, isSuperuser, contentFilters);
++    if (!scope) return [];
++    return this.db
++      .select({ id: books.id, status: userBookStatus.status, updatedAt: userBookStatus.updatedAt, finishedAt: userBookStatus.finishedAt })
++      .from(books)
++      .leftJoin(bookMetadata, eq(bookMetadata.bookId, books.id))
++      .innerJoin(userBookStatus, and(eq(userBookStatus.bookId, books.id), eq(userBookStatus.userId, userId)))
++      .where(scope.where)
++      .orderBy(books.id)
++      .limit(200);
++  }
++
+   async getBooksPage(
+     userId: number,
+     sortOrder: OpdsSortOrder,

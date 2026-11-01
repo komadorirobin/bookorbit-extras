@@ -51,6 +51,14 @@
       "localImplementation": "3c39bdd8e4ce68c7d10abc30d76cc03eea9bbac8",
       "migrationRequired": false
     },
+    "status": {
+      "patch": "server-support/bookorbit-3.6.0/status.patch",
+      "sha256": "ba588d41ee7323b5b46ff0e3603294ed7dbbcc0e46d3a56c34a58a45a8d24bbd",
+      "localImplementation": "6cb2feb2938d564b3bade449f649d885a91e49b1",
+      "experimental": true,
+      "localOnly": true,
+      "migrationRequired": false
+    },
     "composable": true,
     "futureVersionsSupported": false
   },

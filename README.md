@@ -4,6 +4,17 @@ An independent, optional patch collection by komadorirobin. Not an official
 BookOrbit, KOReader or Hardcover release. No account credentials are included.
 Nothing here deploys a server automatically.
 
+Local, unpublished follow-up: `server-support/bookorbit-3.6.0/status.patch`
+adds authenticated, bounded GET-only reading-status reads for OrbitUI. It
+requires no database migration. Use the exact-base source helper's explicit
+`--features status` or `--features all`; `both` keeps its existing meaning.
+No running server or published package has been changed.
+
+Lokalt, opublicerat tillägg: `status.patch` hämtar lässtatus och ändringstid för
+redan kopplade böcker, med autentisering och högst 200 ID:n per anrop. Ingen
+databasmigrering krävs. Välj uttryckligen `--features status` eller `all` i
+källkodshjälparen. Ingen server eller publicerad version har ändrats.
+
 [Svenska](#svenska) | [Compatibility and exact sources](compatibility.json)
 | [Device patches](#device-installation) | [BookOrbit 3.6.0 server extras](server-support/bookorbit-3.6.0/README.md)
 | [Legacy 3.2.0 overlay](server-support/bookorbit-undo-opening/README.md)

@@ -9,7 +9,7 @@ expected = dict(manifest["deviceSource"]["files"])
 for key in ("undoOpeningV1", "tagMatchesV1"):
     entry = manifest[key]
     expected[entry["patch"]] = entry["sha256"]
-for key in ("undo", "tags"):
+for key in ("undo", "tags", "status"):
     entry = manifest["stableServer"][key]
     expected[entry["patch"]] = entry["sha256"]
 for name, digest in expected.items():
@@ -21,4 +21,4 @@ assert manifest["stableServer"]["composable"] is True
 assert manifest["stableServer"]["futureVersionsSupported"] is False
 assert manifest["stableServer"]["undo"]["legacyCustomDatabaseAutomaticUpgrade"] is False
 assert manifest["automaticDeployment"] is False
-print("PASS: six pinned artifacts, notices, exact stable base, legacy separation and no deployment")
+print("PASS: pinned device/server artifacts, notices, exact stable base, legacy separation and no deployment")
