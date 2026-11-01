@@ -67,6 +67,13 @@ restore stale progress files to bypass a hold. Unsupported server routes are
 not the same as tested server support; see the server guide for fallback and
 reconciliation. Never test against real Hardcover reading records.
 
+Reloading the same unchanged cover, including KOReader's close/reopen after a
+font/layout change, preserves Undo and the original operation ID, unread
+snapshot and 24-hour deadline. A page turn, book switch, changed reading data
+or annotations still ends eligibility. The device-side reload fix needs no
+server update or migration and does not reopen committed readings or rewrite
+existing history.
+
 ### Hardcover single-writer patch
 
 Use this only if **BookOrbit is meant to own automatic Hardcover reading
@@ -97,8 +104,10 @@ reading state. Embedded EPUB tags do not need this API.
 
 ## Sources, licensing and verification
 
-Collection format **0.2.0**, assembled 2026-10-31. Device patch bytes remain
-unchanged from Ereader `6c05155c`. The server undo extension has been ported to
+Collection format **0.2.1**, updated 2026-11-01. The device Undo patch now retains
+provisional openings across unchanged same-book reloads; the Hardcover patch
+and server artifacts are unchanged. Exact Ereader source and device checksums
+are pinned in `compatibility.json`. The server undo extension has been ported to
 official 3.6.0 and the optional tag API rebased to that same source. The original
 development-base tag implementation `0cf7db1` is retained separately. Full revisions,
 component versions and SHA-256 values are in `compatibility.json`. No fonts,
@@ -160,6 +169,13 @@ i kompatibilitetsfilen. Hantera alla skyddade/väntande öppningar och eventuell
 serverstädning med patchen **innan** du tar bort eller stänger av något stöd.
 Radera aldrig patchens sparade tillstånd för att kringgå ett stopp. Funktionen
 gäller en oläst bok före första sidvändningen, inom 24 timmar, inte all läshistorik.
+
+Omladdning av samma oförändrade omslag behåller ångramöjligheten, även när
+KOReader stänger och öppnar boken igen efter en layoutändring. Ursprunglig
+öppning och tidsgräns behålls; sidvändning, bokbyte eller ändrad läsposition
+eller anteckningar avslutar fortfarande ångrafönstret. Rättningen i
+enhetspatchen kräver ingen serveruppdatering och ändrar inte befintlig historik
+eller redan bekräftade öppningar.
 
 **Servern:** Be administratören följa rätt versionsspecifik guide, testa i en
 isolerad miljö och verifiera databasbackup innan driftsättning. Den gamla

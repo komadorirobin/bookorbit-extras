@@ -1,5 +1,42 @@
 # Verification record
 
+## Same-cover reload fix, collection 0.2.1
+
+Checked locally 2026-11-01. The device Undo patch and its mirrored Ereader copy
+now reuse the original provisional opening when the same unchanged cover is
+reloaded. Duplicate `ReaderReady` no longer commits it. A close/reopen is
+accepted only after checking the saved sidecar before load and the file,
+document digest, initial page and annotations at readiness. Normal reopen
+summary bookkeeping may change without replacing the original unread snapshot.
+
+- The new duplicate-readiness regression fails against the previous patch in
+  both the state suite and the unmodified stock-plugin integration suite.
+- Updated state and actual-source suites pass in Lua 5.5 and LuaJIT against
+  complete BookOrbit 1.5.5, 2.0.0 and 2.1.0 source profiles. The same tests run
+  from both patch repositories. Source fingerprints are unchanged.
+- Checks cover fresh reader/plugin instances, changed page count on the cover,
+  original ID/snapshot/deadline retention, one remote registration, continued
+  outbox/upload holds, the native menu/sheet action, undo after reopening and
+  an excluded statistics interval spanning the reloaded sessions.
+- Real page turns still commit. Book changes, different digests, modified
+  annotations/progress/status, missing preload evidence and expiry cannot
+  revive Undo. Pending Undo remains recoverable; committed/undone openings and
+  locally restored pending cleanup are never reactivated. Account isolation
+  and the existing offline/conflict/Hardcover retry tests still pass.
+- The unchanged Hardcover single-writer regression passes in both interpreters.
+  Lua syntax checks, mirrored-byte checks and the distributable checksum/notice
+  check pass. `compatibility.json` pins the updated exact Ereader revision.
+- No server source, migration, compatibility profile, user history or saved
+  opening state was changed. Server/database suites were not rerun for this
+  device-only fix. The device is not currently connected over ADB, so this
+  revision has not been installed or physically verified there. No push or
+  release was performed for this local change.
+
+Svenska: omladdning av samma oförändrade omslag behåller ångramöjligheten.
+Tester mot alla tre stödda pluginversionerna fungerar i båda tolkarna, inklusive
+sidvändning, bokbyte, väntande ångring och skydd mot ändrad läsdata. Rättningen
+är lokal; ingen enhet, server eller befintlig läshistorik har ändrats.
+
 ## Official 3.6.0 port, collection 0.2.0
 
 Checked 2026-10-31 against official release v3.6.0, published 2026-10-28,

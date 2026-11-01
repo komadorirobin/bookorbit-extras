@@ -1,12 +1,12 @@
 {
-  "collectionVersion": "0.2.0",
-  "assembledAt": "2026-10-31",
+  "collectionVersion": "0.2.1",
+  "assembledAt": "2026-11-01",
   "official": false,
   "deviceSource": {
     "repository": "https://github.com/komadorirobin/Ereader",
-    "revision": "6c05155cb96395b656f85c47b4924523488715a1",
+    "revision": "30ded4e3f7fb1434ecc095e4feeb8ac48079d1b7",
     "files": {
-      "2-bookorbit-undo-opening.lua": "a8557ac6c46e74eb84c84bf3df31fe5d22b9b09f298e0d21ea93fb37570e3290",
+      "2-bookorbit-undo-opening.lua": "5668f9695b4d09e3faa6e1edae628754367e5834559374b9e33da26c91f13aa6",
       "2-hardcover-bookorbit-sync.lua": "671a3a8ebf1e5d29731417e3befc0c4aa7720008bfee8dc0238c7ff21c176faf"
     }
   },
