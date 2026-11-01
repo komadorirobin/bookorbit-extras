@@ -37,6 +37,17 @@ Tester mot alla tre stödda pluginversionerna fungerar i båda tolkarna, inklusi
 sidvändning, bokbyte, väntande ångring och skydd mot ändrad läsdata. Rättningen
 är lokal; ingen enhet, server eller befintlig läshistorik har ändrats.
 
+Publication follow-up, 2026-11-01: the user explicitly authorized pushing and
+publishing this fix. Ereader `30ded4e3f7fb1434ecc095e4feeb8ac48079d1b7` and Extras
+`4c7e1b242a487982589733d892baec47cffbe870` are pushed. Annotated tag **v0.2.1**
+pins that Extras source; its public release was published at **09:36:57 UTC**.
+The draft download matches both uploaded artifacts byte-for-byte. The published
+Undo asset SHA-256 is
+`5668f9695b4d09e3faa6e1edae628754367e5834559374b9e33da26c91f13aa6`, and the
+public Ereader catalogue blob matches the same local Git blob. Outgoing Gitleaks
+checks pass for both repositories. No device installation or server deployment
+was performed. These verification-only notes do not change the tagged artifacts.
+
 ## Official 3.6.0 port, collection 0.2.0
 
 Checked 2026-10-31 against official release v3.6.0, published 2026-10-28,
