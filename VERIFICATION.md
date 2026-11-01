@@ -1,5 +1,20 @@
 # Verification record
 
+## Reading-status publication and requested server deployment, 2026-11-01
+
+After OrbitUI Beta 28 publication, the user explicitly authorizes publishing
+and deploying the server extension. Collection 0.3.0 exposes the unchanged
+read-statuses v1 patch, retains exact official 3.6.0 compatibility and leaves
+the helper's `both` default and all device/older patch bytes unchanged. CI now
+covers `status` and `all` as well as `undo`, `tags` and `both`.
+
+The existing production server has its own earlier undo extension and historical
+0101 migration. Do not replace it with the generic 0132 build. The deployment
+candidate reproduces that exact current source before applying status alone;
+no production migration, schema or existing undo change is required. Release,
+fresh tests, backup/restore, complete-source notice and deployment verification
+are recorded below when completed. No success is inferred from preparation.
+
 ## Local reading-status API follow-up, 2026-11-01
 
 Not published or deployed. User explicitly authorizes local implementation,

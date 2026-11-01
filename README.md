@@ -4,16 +4,18 @@ An independent, optional patch collection by komadorirobin. Not an official
 BookOrbit, KOReader or Hardcover release. No account credentials are included.
 Nothing here deploys a server automatically.
 
-Local, unpublished follow-up: `server-support/bookorbit-3.6.0/status.patch`
+Collection 0.3.0: `server-support/bookorbit-3.6.0/status.patch`
 adds authenticated, bounded GET-only reading-status reads for OrbitUI. It
 requires no database migration. Use the exact-base source helper's explicit
 `--features status` or `--features all`; `both` keeps its existing meaning.
-No running server or published package has been changed.
+The default `both` still means undo and tags only. Server installation is
+separate from an OrbitUI/device update and requires an administrator.
 
-Lokalt, opublicerat tillägg: `status.patch` hämtar lässtatus och ändringstid för
+Version 0.3.0: `status.patch` hämtar lässtatus och ändringstid för
 redan kopplade böcker, med autentisering och högst 200 ID:n per anrop. Ingen
 databasmigrering krävs. Välj uttryckligen `--features status` eller `all` i
-källkodshjälparen. Ingen server eller publicerad version har ändrats.
+källkodshjälparen. Standardvalet `both` betyder fortfarande bara ångring och
+taggar. Servern installeras separat av administratören, inte via OrbitUI.
 
 [Svenska](#svenska) | [Compatibility and exact sources](compatibility.json)
 | [Device patches](#device-installation) | [BookOrbit 3.6.0 server extras](server-support/bookorbit-3.6.0/README.md)
@@ -26,14 +28,15 @@ källkodshjälparen. Ingen server eller publicerad version har ändrats.
 | Want to read [Local] / local EPUB tags | OrbitUI; ordinary local files | Nothing. No account or BookOrbit patch. |
 | Want to read [BookOrbit] | Connected BookOrbit KOReader plugin and OrbitUI | Normal BookOrbit Want to Read API. No extras patch. Only matched local books appear. |
 | Online BookOrbit tag matches | OrbitUI Beta 22 or newer; connected account-scoped BookOrbit plugin | Optional **tag-matches v1** patch for exact official **3.6.0**. Read-only, linked local results across profiles, batches of 200 IDs. |
+| Import reading status | OrbitUI Beta 28 or newer; connected BookOrbit plugin; explicit opt-in under Integrations > BookOrbit | Optional **read-statuses v1** patch for exact official **3.6.0**. GET-only, 200 supplied IDs, canonical status/finish timestamps, no migration. |
 | Undo accidental opening | `2-bookorbit-undo-opening.lua`, compatible BookOrbit plugin | **Undo-opening v1 port for official 3.6.0**, migration **0132**. Use the new complete-source build, not the old compiled overlay. |
 | One automatic Hardcover writer | `2-hardcover-bookorbit-sync.lua` plus the separate Hardcover plugin, with BookOrbit as your chosen automatic writer | Enable BookOrbit's normal Hardcover integration. No extra server patch for this feature. |
 
 The new [3.6.0 package](server-support/bookorbit-3.6.0/README.md) targets exact
 official release `a96ff0c`, the latest stable checked on 2026-10-31. Undo and tags
-can be selected individually or together on that base. This does **not** mean
+and status can be selected individually or together on that base. This does **not** mean
 3.2.0+, future releases or the moving development branch. An OrbitUI update
-does not install server extensions. Nothing has been deployed to your server.
+does not install server extensions. This repository never deploys automatically.
 
 **Already running the old custom 3.2.0 undo database?** Stop and read the
 [upgrade warning](server-support/bookorbit-3.6.0/README.md#important-an-old-custom-320-database-is-not-an-ordinary-upgrade).
@@ -115,9 +118,10 @@ reading state. Embedded EPUB tags do not need this API.
 
 ## Sources, licensing and verification
 
-Collection format **0.2.1**, updated 2026-11-01. The device Undo patch now retains
-provisional openings across unchanged same-book reloads; the Hardcover patch
-and server artifacts are unchanged. Exact Ereader source and device checksums
+Collection format **0.3.0**, updated 2026-11-01. Adds the optional read-statuses
+API and exact-source helper selections `status` and `all`. The device Undo
+patch still retains provisional openings across unchanged same-book reloads;
+both device files and the previous undo/tag patches are unchanged. Exact Ereader source and device checksums
 are pinned in `compatibility.json`. The server undo extension has been ported to
 official 3.6.0 and the optional tag API rebased to that same source. The original
 development-base tag implementation `0cf7db1` is retained separately. Full revisions,
@@ -162,6 +166,11 @@ inte BookOrbit, KOReader eller Hardcover-pluginet. Inget driftsätts automatiskt
 - **Taggar via nätet** kräver det valfria server-API:t i
   [3.6.0-guiden](server-support/bookorbit-3.6.0/README.md). Det söker bara bland
   angivna, kopplade lokala böcker i alla profiler. Taggar och genrer blandas inte.
+- **Hämta lässtatus** kräver OrbitUI Beta 28 eller senare, aktivering under
+  Integrationer > BookOrbit och servertillägget `read-statuses v1`. Högst 200
+  angivna ID:n per GET-anrop; ingen migrering, sidpositionssynk eller skrivning
+  till servern. Öppna böcker, väntande ångring och nyare/osäkra lokala ändringar
+  skyddas av klienten. Funktionen är avstängd som standard.
 - **Ångra öppning** kräver både enhetspatchen och en kompatibel serverutökning.
   Det nya paketet gäller **exakt officiella BookOrbit 3.6.0** och kan kombineras
   med tagg-API:t på samma bas. Det är inte en universell patch för 3.2.0 eller

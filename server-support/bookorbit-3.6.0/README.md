@@ -13,10 +13,9 @@ branch. New upstream versions need a fresh compatibility review.
 | --- | --- | --- |
 | `undo.patch` | Undo an accidental unread-book opening before actual reading. Native KOReader authentication, owned reading attempt and guarded Hardcover cleanup. | Drizzle-generated **0132_undo_reading_opening** after the official 3.6.0 history. |
 | `tags.patch` | Read-only exact tag matching restricted to supplied local book IDs, user libraries, present books and content filters. | None. |
-| `status.patch` (local, experimental) | Authenticated GET-only status and modification/finish timestamps for supplied matched IDs. OrbitUI's optional background importer. | None. |
+| `status.patch` (experimental, collection 0.3.0) | Authenticated GET-only status and modification/finish timestamps for supplied matched IDs. OrbitUI Beta 28's optional background importer. | None. |
 
-`status.patch` is a local follow-up, not a published release or a deployed
-server update. Use `--features status` to select it alone or `--features all`
+Use `--features status` to select status reads alone or `--features all`
 to combine all three patches. The existing `both` default still means only
 undo and tags; existing build commands do not silently activate a new API.
 
@@ -33,7 +32,7 @@ no detail/cover/progress hydration, mutation, migration or remote service call.
 `updatedAt` belongs to the canonical user status, not generic book metadata.
 OrbitUI preserves newer local edits and ambiguous same-day local conflicts.
 
-Both patches target the **same exact 3.6.0 base**. They can be selected
+All three patches target the **same exact 3.6.0 base**. They can be selected
 individually or together. The 3.6.0 plugin is already supported by the unchanged
 device patch. No new automatic Hardcover writer is introduced. Want to read
 [BookOrbit] already uses the standard API and needs neither server patch.
@@ -127,12 +126,12 @@ operator must finish these presentation/source-offer steps before deployment.
 
 ## Svenska
 
-**Lokalt och opublicerat:** `status.patch` lägger till ett separat läsande
+**Version 0.3.0:** `status.patch` lägger till ett separat läsande
 API för status, ändringstid och slutdatum, högst 200 kopplade bok-ID:n per
 anrop. Bara den inloggade användarens tillgängliga böcker ingår. Ingen
 migrering, metadata-/omslagshämtning eller skrivning sker. `--features status`
 väljer bara detta tillägg; `all` kombinerar det med taggar och ångring.
-Det gamla standardvalet `both` är oförändrat. Ingen server driftsätts.
+Det gamla standardvalet `both` är oförändrat. Ingen server driftsätts automatiskt.
 
 Det här är en **versionslåst portning till officiella BookOrbit 3.6.0**, inte
 stöd för alla versioner sedan 3.2.0. Ångra öppning och tagg-API:t har nu samma

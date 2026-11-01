@@ -1,5 +1,5 @@
 {
-  "collectionVersion": "0.2.1",
+  "collectionVersion": "0.3.0",
   "assembledAt": "2026-11-01",
   "official": false,
   "deviceSource": {
@@ -56,7 +56,7 @@
       "sha256": "ba588d41ee7323b5b46ff0e3603294ed7dbbcc0e46d3a56c34a58a45a8d24bbd",
       "localImplementation": "6cb2feb2938d564b3bade449f649d885a91e49b1",
       "experimental": true,
-      "localOnly": true,
+      "localOnly": false,
       "migrationRequired": false
     },
     "composable": true,
