@@ -17,6 +17,20 @@ databasmigrering krävs. Välj uttryckligen `--features status` eller `all` i
 källkodshjälparen. Standardvalet `both` betyder fortfarande bara ångring och
 taggar. Servern installeras separat av administratören, inte via OrbitUI.
 
+[Collection 0.3.0 is published](https://github.com/komadorirobin/bookorbit-extras/releases/tag/v0.3.0).
+Its assets include checksums and two distinct complete-source archives: the
+portable exact-3.6.0 `all-source` package (generic undo migration 0132), and
+the separately reviewed **Littex** build preserving one existing installation's
+legacy 0101 undo history. The latter is not a generic database upgrade.
+The user-approved Littex installation now serves read-statuses v1; this does
+not deploy it for other users or turn on OrbitUI's importer automatically.
+
+[Version 0.3.0 är publicerad](https://github.com/komadorirobin/bookorbit-extras/releases/tag/v0.3.0)
+med kontrollsummor och full källkod. Det generella arkivet använder 0132;
+Littex-arkivet bevarar en separat granskad egen 0101-historik och är inte en
+allmän uppgradering. Det godkända Littex-bygget är driftsatt, men andras servrar
+och läsarens avstängda standardval påverkas inte.
+
 [Svenska](#svenska) | [Compatibility and exact sources](compatibility.json)
 | [Device patches](#device-installation) | [BookOrbit 3.6.0 server extras](server-support/bookorbit-3.6.0/README.md)
 | [Legacy 3.2.0 overlay](server-support/bookorbit-undo-opening/README.md)
@@ -125,8 +139,12 @@ both device files and the previous undo/tag patches are unchanged. Exact Ereader
 are pinned in `compatibility.json`. The server undo extension has been ported to
 official 3.6.0 and the optional tag API rebased to that same source. The original
 development-base tag implementation `0cf7db1` is retained separately. Full revisions,
-component versions and SHA-256 values are in `compatibility.json`. No fonts,
-artwork, private configuration or complete upstream plugin is bundled.
+component versions and SHA-256 values are in `compatibility.json`. The patch
+repository does not bundle an upstream application or private configuration.
+The release's explicitly named complete-source archives additionally contain
+the pinned upstream application's original source/assets/notices, with the
+selected modifications. No private configuration, credentials or backups are
+included in those archives.
 
 The collection's original code is AGPL-3.0-only; see [LICENSE](LICENSE).
 BookOrbit-derived server changes retain the upstream
@@ -141,8 +159,9 @@ alone is not the complete source. Do not remove upstream notices or branding
 restrictions when building a modified server.
 
 Device and Hardcover transport tests mock storage/network/credentials. Server
-integration tests also use a disposable local PostgreSQL database. These do
-not validate physical reader behaviour or a production deployment. Run from
+integration tests also use a disposable local PostgreSQL database. Those suites
+alone do not validate physical reader behaviour or a production deployment;
+the separately authorized Littex deployment receipt is in VERIFICATION. Run from
 this repository root:
 
 ```sh

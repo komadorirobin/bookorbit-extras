@@ -13,7 +13,88 @@ The existing production server has its own earlier undo extension and historical
 candidate reproduces that exact current source before applying status alone;
 no production migration, schema or existing undo change is required. Release,
 fresh tests, backup/restore, complete-source notice and deployment verification
-are recorded below when completed. No success is inferred from preparation.
+are recorded below. The user separately approves the modified build name
+**Littex**, keeping BookOrbit attribution and the complete-source offer.
+
+**Completed:** public release **v0.3.0**, tag source
+`644640a876789941b61ff88c5687a2dbac0c2cae`, published **19:52:52 UTC**.
+All uploaded draft artifacts were downloaded and SHA-256 verified before
+publishing. Anonymous download of the complete Littex source matches the
+operated build's source archive. No older release assets or tags were changed.
+
+- GitHub run **41341624599** passes all six jobs: device/artifact checks and
+  exact-source `undo`, `tags`, `both`, `status`, `all` server combinations,
+  including typecheck, full server ESLint, build and relevant tests.
+- The existing installation's 2,772 tracked runtime source files and 6,008
+  compiled files were compared to the original source/builder before porting.
+  The Littex candidate preserves its existing custom undo patch exactly and
+  changes no schema, migration, migration ledger logic or dependency lockfile.
+  Old and new runtime migration directories are byte-identical.
+- That exact candidate passes **1,567 server tests**, typecheck, full ESLint,
+  **14 client tests**, client typecheck/lint/format and the native asset build.
+  All **13 native undo PostgreSQL tests** also pass against a restored copy,
+  completing the database cases skipped by the earlier unit run.
+- Tests use a dedicated Docker-internal network with outbound access blocked,
+  disposable PostgreSQL 16 matching production, no production filesystem mounts
+  and synthetic application secrets. The native migrator leaves all **177**
+  restored table fingerprints, including the ledger, unchanged.
+- Authenticated status acceptance passes both on that isolated copy and after
+  deployment, through loopback and public HTTPS. A 200-ID request (including
+  a duplicate and missing ID) returns the expected 198 distinct rows with exact
+  canonical timestamps. Authentication, unauthenticated native undo guard,
+  invalid/oversized queries and no-store pass. All 12 protected reading/book/
+  migration tables are unchanged across those GET-only checks. No test writes
+  to real reading status or Hardcover are issued. The single HTTPS status
+  request took 365 ms; this is not a physical reader/startup benchmark.
+- Immediately before cutover, with only the app stopped, a fresh database dump
+  was restored into another disposable database and all **177** table counts/
+  hashes matched. Appdata's **2,407,864,320-byte** backup was compared against
+  its stopped source. Configuration, old image/assets and backups are retained
+  privately for application rollback. No production database restore occurred.
+- Deployment completed **19:54:13 UTC**, image
+  `littex-local:3.6.0-status-v1-20261101`, ID
+  `sha256:2a1a4f9b7de2ed7b12bf550543bf1c1ca334293aeeb2955ddb08f9c42f01ce6b`.
+  Health is green; database and unrelated containers remain the same instances.
+  Credentials, ports, data mounts, PWA overrides and saved sync choices are
+  unchanged. All 5,802 existing hashed client assets are retained alongside
+  the new assets. The normal startup touches session/refresh-token cleanup
+  and derived daily statistics only; the 12 protected tables, including all
+  reading status/history, opening state, book files and migration ledger, match
+  the stopped baseline after startup.
+- The anonymous deployed UI renders **Littex**, preserved Powered by BookOrbit,
+  copyright/license/additional terms, a modification notice in Swedish/English
+  and a working offer of full Corresponding Source. Browser console reports
+  no errors on login/Legal notices. New-commit secret scans pass. The full
+  upstream tree scan's 36 generic-key findings are confined to 22 files verified
+  byte-identical to official upstream; no private credentials were added.
+- Both isolated test containers, their disposable volumes and internal network
+  are removed after verification. Production remains healthy with zero restarts
+  and no startup error log lines. Backups, complete source and the old runtime
+  image/assets remain available for recovery; no production files were deleted.
+
+Exact complete-source archives in the release:
+
+- `littex-3.6.0-status-v1-20261101-source.tar.gz`, source commit
+  `819daf512e235102c82d668ffa258ef86a43f9fa`, 34,688,481 bytes,
+  SHA-256 `4f3149cf0bc3a5687019906165cad8755194360c87005b52fa97fd2a93e1d487`.
+  This is the separately reviewed existing legacy-0101 installation, NOT a
+  generic image/database upgrade.
+- `bookorbit-3.6.0-extras-0.3.0-all-source.tar.gz`, source tree
+  `78ce0355b4e1ba750763f078b2f8621df0999616`, 34,758,425 bytes,
+  SHA-256 `157c5555dc0f70fea0f4314fa047303969e5584802156f4ab6b40a8027ee699e`.
+  This is the portable exact-base helper output with generic migration 0132.
+
+Private evidence: `test-results/status-release-20261101/`. Database/appdata
+backups, credentials and deployment configuration stay private on the server,
+not in Git or release assets. OrbitUI Beta 28 bytes remain immutable, no reader
+is installed/changed, and the client importer is still OFF by default. Physical
+Bigme status-import/conflict/lifecycle acceptance remains pending.
+
+Svenska: 0.3.0 är publicerad och det godkända Littex-bygget är driftsatt med
+fungerande autentiserat status-API. En färsk backup har återställningstestats;
+läsdata och befintlig ångring är bevarade. Ingen databasmigrering eller verklig
+testskrivning till lässtatus/Hardcover behövdes. Funktionen i läsaren aktiveras
+separat, och test av själva importen på fysisk enhet återstår.
 
 ## Local reading-status API follow-up, 2026-11-01
 
