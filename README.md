@@ -4,11 +4,12 @@ An independent, optional patch collection by komadorirobin. Not an official
 BookOrbit, KOReader or Hardcover release. No account credentials are included.
 Nothing here deploys a server automatically.
 
-**Local device follow-up, not published (2026-11-10):** the working source adds
+**Device follow-up on main (2026-11-10), no new tagged release:** the source adds
 reviewed Undo compatibility with the official KOReader plugin **2.2.0**, from
 BookOrbit 3.7.0 `6f8f5f48`. All earlier tested device profiles remain supported.
 The public 0.3.0 release assets have not been replaced. This is not a 3.7.0
 server port: all server patches below still require their exact existing bases.
+The same updated patch is available through Ereader Patch Manager's catalogue.
 No server deployment, reading-state migration or permission change is needed
 for this device compatibility change. See [verification](VERIFICATION.md).
 

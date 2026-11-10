@@ -1,12 +1,13 @@
 # Verification record
 
-## Local device compatibility: BookOrbit plugin 2.2.0, 2026-11-10
+## BookOrbit plugin 2.2.0 compatibility and device installation, 2026-11-10
 
-User reports `untested main.lua` after updating BookOrbit, and then an absent
-BookOrbit menu. The existing pre-init guard explains both: protected state
-prevents an unreviewed plugin from initializing at all. No device is currently
-connected to ADB, so the installed version and state have not been read or
-changed. This is a local implementation, not publication or installation.
+Initial offline investigation: the user reports `untested main.lua` after
+updating BookOrbit, and then an absent BookOrbit menu. The existing pre-init
+guard explains both: protected state
+prevents an unreviewed plugin from initializing at all. At that stage no device
+was connected to ADB. The implementation was initially local; publication and
+the subsequently authorized closed-app installation are recorded below.
 
 Official latest release checked through GitHub is **3.7.0**, commit
 **6f8f5f4818eb737dc4d78fc5b5294fc3adb26860**, containing KOReader plugin
@@ -47,13 +48,57 @@ settings/history/openings and public release assets are unchanged. Collection
 0.3.0 labels still describe the existing public release, not a new release of
 these bytes. Server/database suites are not rerun for this device-only change;
 the server support remains exact 3.6.0, not automatically 3.7.0-compatible.
-No push/release/deployment or device test has been performed. Update/install
-still needs separate direction and a closed-app backup of current device state.
+The initial local pass did not publish or install anything; update/install
+required separate direction and a closed-app backup of current device state.
 Private source/diff/test evidence starts at `/tmp/bookorbit-undo-compat.baw9do/`;
 the exact official release plugin and retained test logs are also kept under
 ignored `test-results/device-22-20261110/` in this checkout. Relative plugin
 paths use a real working-directory primitive in the drawing/FS fixture; the
 real stock menu path resolver remains unchanged.
+
+Publication follow-up: the user explicitly approved pushing the fix to both
+repositories and installing KOAssistant on the Bigme. Ereader **431a4d11** and
+Extras **2e6dd22b** are pushed to their respective `main` branches. The public
+Ereader patch blob **c64ccb77** matches the reviewed local bytes. All six jobs
+in [GitHub run 42879460938](https://github.com/komadorirobin/bookorbit-extras/actions/runs/42879460938)
+pass, including device/artifact checks and the five unchanged server matrices.
+No new collection tag/release, old asset replacement or server operation.
+
+ADB is now connected. The installed BookOrbit main reports **2.2.0**, and the
+old device patch lacks that profile, confirming the reported mismatch. Official
+KOAssistant **0.24.1**, tag commit **c014efe9**, ZIP SHA-256
+`a2630b01c0f4b2642f1a9a7257f20b3ab3150580df6f29a9f115a99b3868d54e`
+matches the GitHub release digest: 7,391,588 bytes, 360 regular package files,
+30,077,775 expanded bytes, safe paths/CRC/types and 266 LuaJIT syntax files.
+No AI request, account login or credential transfer is part of installation.
+
+After the user confirmed KOReader was fully closed, the fresh compressed
+backup passed gzip integrity plus all 465 archive-entry path/type/exclusion
+checks. It includes reader preferences, settings, history, the old undo patch
+and the installed BookOrbit source. The large bookinfo caches were explicitly
+excluded because this installation does not change them. The private backup
+and receipts remain under ignored `test-results/device-22-20261110/install/`;
+they are not distributed in this repository.
+
+- The pulled device BookOrbit plugin is byte-identical to the complete official
+  2.2.0 source. The undo integration suite passes again against that actual
+  device copy under both Lua and LuaJIT, with fake UI/storage/transport.
+- The updated undo patch was staged, checked and renamed into the original
+  patch path. Its installed SHA-256 matches `c5b2f98e...b8445d` above. The old
+  `5668f969...13aa6` patch is retained inside the verified host backup.
+- The unmodified official KOAssistant 0.24.1 package was staged outside the
+  plugin directory, then installed at `plugins/koassistant.koplugin`. All 360
+  installed regular-file hashes match the reviewed extracted package. No
+  previous KOAssistant installation was present or overwritten.
+- Reader preferences, history, BookOrbit sync state and statistics database
+  hashes match the closed-app backup and match before/after installation.
+  No existing book file, book sidecar, plugin settings, permission or sync
+  account was edited. The existing guarded opening state was retained.
+
+KOReader remains closed. Native first-start/menu acceptance and KOAssistant
+setup/login are still pending with the user; neither a real-book sync/undo nor
+an AI request was performed as an installation test. No claim of on-device
+runtime acceptance or automatic account configuration is made here.
 
 ## Reading-status publication and requested server deployment, 2026-11-01
 
