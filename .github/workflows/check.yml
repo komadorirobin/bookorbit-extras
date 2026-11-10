@@ -19,7 +19,7 @@ jobs:
           set -euo pipefail
           lua5.1 tests/bookorbit_undo_state_test.lua
           luajit tests/bookorbit_undo_state_test.lua
-          for profile in 2855dbb8a39d20bf711f01772e2678ef0625dd63 c59dd0118fd0d5d0ecbd716d1d7fde2c97f8e2ea a96ff0c85a4c25e9126dfa4c71ea87537a3baf7a; do
+          for profile in 2855dbb8a39d20bf711f01772e2678ef0625dd63 c59dd0118fd0d5d0ecbd716d1d7fde2c97f8e2ea a96ff0c85a4c25e9126dfa4c71ea87537a3baf7a 6f8f5f4818eb737dc4d78fc5b5294fc3adb26860; do
             target="$RUNNER_TEMP/bookorbit-$profile"
             mkdir -p "$target"
             curl -fLsS --retry 3 "https://codeload.github.com/bookorbit/bookorbit/tar.gz/$profile" | tar -xz -C "$target" --strip-components=3 --wildcards '*/koreader-plugin/bookorbit.koplugin/*'

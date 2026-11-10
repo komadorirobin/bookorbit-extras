@@ -4,6 +4,14 @@ An independent, optional patch collection by komadorirobin. Not an official
 BookOrbit, KOReader or Hardcover release. No account credentials are included.
 Nothing here deploys a server automatically.
 
+**Local device follow-up, not published (2026-11-10):** the working source adds
+reviewed Undo compatibility with the official KOReader plugin **2.2.0**, from
+BookOrbit 3.7.0 `6f8f5f48`. All earlier tested device profiles remain supported.
+The public 0.3.0 release assets have not been replaced. This is not a 3.7.0
+server port: all server patches below still require their exact existing bases.
+No server deployment, reading-state migration or permission change is needed
+for this device compatibility change. See [verification](VERIFICATION.md).
+
 Collection 0.3.0: `server-support/bookorbit-3.6.0/status.patch`
 adds authenticated, bounded GET-only reading-status reads for OrbitUI. It
 requires no database migration. Use the exact-base source helper's explicit
@@ -85,7 +93,7 @@ Install and verify the compatible server extension first. This protects an
 accidentally opened **unread** book until the first actual page turn, within
 24 hours. It is not general-purpose undo for reading history. The current
 device patch fingerprints complete source profiles for BookOrbit plugins
-1.5.5, 2.0.0 and 2.1.0; later unreviewed source can fail its guard even when a
+1.5.5, 2.0.0, 2.1.0 and 2.2.0; later unreviewed source can fail its guard even when a
 version number looks similar. See exact commits in `compatibility.json`.
 
 Use the patch's BookOrbit menu/gesture action to commit or undo an opening.
@@ -94,6 +102,16 @@ disabling/removing either half. Do not delete `bookorbit_openings` settings or
 restore stale progress files to bypass a hold. Unsupported server routes are
 not the same as tested server support; see the server guide for fallback and
 reconciliation. Never test against real Hardcover reading records.
+
+When the compatibility guard pauses initialization, BookOrbit's menu can also
+be absent until the compatible patch is installed and KOReader restarted. The
+guard does not remove plugin files or credentials. Do not disable the patch or
+delete saved state to force the plugin to load.
+
+**Svenska:** Den lokala kompatibilitetsuppdateringen stöder plugin 2.2.0 utan att
+ändra servern eller sparad ångring. När säkerhetsspärren stoppar pluginet före
+start kan BookOrbit-menyn försvinna. Behåll patchen och dess tillstånd; lösningen
+är den granskade kompatibilitetsuppdateringen och därefter omstart av KOReader.
 
 Reloading the same unchanged cover, including KOReader's close/reopen after a
 font/layout change, preserves Undo and the original operation ID, unread

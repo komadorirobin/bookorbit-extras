@@ -4,9 +4,9 @@
   "official": false,
   "deviceSource": {
     "repository": "https://github.com/komadorirobin/Ereader",
-    "revision": "30ded4e3f7fb1434ecc095e4feeb8ac48079d1b7",
+    "revision": "431a4d11caaec0bff850524d0301350ffae27e4b",
     "files": {
-      "2-bookorbit-undo-opening.lua": "5668f9695b4d09e3faa6e1edae628754367e5834559374b9e33da26c91f13aa6",
+      "2-bookorbit-undo-opening.lua": "c5b2f98e6ebcf8d5a46143c3d22371b2c23a243963dc231d901636b354b8445d",
       "2-hardcover-bookorbit-sync.lua": "671a3a8ebf1e5d29731417e3befc0c4aa7720008bfee8dc0238c7ff21c176faf"
     }
   },
@@ -19,7 +19,8 @@
     "pluginProfiles": {
       "1.5.5": "2855dbb8a39d20bf711f01772e2678ef0625dd63",
       "2.0.0": "c59dd0118fd0d5d0ecbd716d1d7fde2c97f8e2ea",
-      "2.1.0": "a96ff0c85a4c25e9126dfa4c71ea87537a3baf7a"
+      "2.1.0": "a96ff0c85a4c25e9126dfa4c71ea87537a3baf7a",
+      "2.2.0": "6f8f5f4818eb737dc4d78fc5b5294fc3adb26860"
     }
   },
   "tagMatchesV1": {

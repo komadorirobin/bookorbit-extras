@@ -1,5 +1,60 @@
 # Verification record
 
+## Local device compatibility: BookOrbit plugin 2.2.0, 2026-11-10
+
+User reports `untested main.lua` after updating BookOrbit, and then an absent
+BookOrbit menu. The existing pre-init guard explains both: protected state
+prevents an unreviewed plugin from initializing at all. No device is currently
+connected to ADB, so the installed version and state have not been read or
+changed. This is a local implementation, not publication or installation.
+
+Official latest release checked through GitHub is **3.7.0**, commit
+**6f8f5f4818eb737dc4d78fc5b5294fc3adb26860**, containing KOReader plugin
+**2.2.0**. Its entire `koreader-plugin` tree is identical to checked main
+**022f9d10206946258cc6d677778ad7e9750c8319**. The previous patch reproduces
+the compatibility failure against that unmodified source. Ereader runtime
+**87ebcd3670c20d2a9fe0ed6579440d7aaf98b04b**, with relative-path fixture follow-up
+**431a4d11caaec0bff850524d0301350ffae27e4b**, adds one complete exact profile,
+without weakening the version-independent fingerprint or pre-init state guard.
+The mirrored device patch SHA-256 is
+`c5b2f98e6ebcf8d5a46143c3d22371b2c23a243963dc231d901636b354b8445d`.
+
+Compared with tested 2.1, seven protected API/sync/queue source files are
+byte-identical. Only normalized main and the two menu files change: 2.2 adds
+a File browser action, deferred native Home event and a return-home bypass
+for that exit. The reviewed profile requires all ten matching files, never a
+mix of releases. It still rejects any modified protected file before init.
+
+- State and unmodified-source integration suites pass under Lua 5.5 and LuaJIT
+  for all four complete 1.5.5/2.0.0/2.1.0/2.2.0 sources, in both patch repos.
+  Existing page-turn/commit, reload, pending/offline undo, account/book isolation,
+  upload exclusion/acknowledgement, queues and compatibility tests remain.
+- Added 2.2 cases keep native File browser and Undo together, verify two-tick
+  close/Home ordering, no provisional outbox/upload, original ID/snapshot and
+  hold surviving document/widget close, successful confirmed Undo from the
+  file manager, and ordinary return-home preference when no bypass is requested.
+- Twelve unmodified upstream menu, lifecycle, outbox, coordinator, job-runner
+  and sweep suites pass under LuaJIT. A separate attempted Lua 5.5 run exposes
+  upstream fixture assumptions about Lua 5.1 `os.execute` results, then native
+  `setfenv`; it is not reported as passing or used instead of the LuaJIT run.
+  The patch's own integration/state suites run on both interpreters unmodified.
+- The existing Hardcover single-writer tests, syntax, mirrored exact bytes and
+  checksum/notice checks pass. CI includes the fourth exact-source profile.
+  Tests mock UI/storage/transport; no real account, reading or Hardcover write.
+
+Server sources, migrations, image/production installation, permissions, saved
+settings/history/openings and public release assets are unchanged. Collection
+0.3.0 labels still describe the existing public release, not a new release of
+these bytes. Server/database suites are not rerun for this device-only change;
+the server support remains exact 3.6.0, not automatically 3.7.0-compatible.
+No push/release/deployment or device test has been performed. Update/install
+still needs separate direction and a closed-app backup of current device state.
+Private source/diff/test evidence starts at `/tmp/bookorbit-undo-compat.baw9do/`;
+the exact official release plugin and retained test logs are also kept under
+ignored `test-results/device-22-20261110/` in this checkout. Relative plugin
+paths use a real working-directory primitive in the drawing/FS fixture; the
+real stock menu path resolver remains unchanged.
+
 ## Reading-status publication and requested server deployment, 2026-11-01
 
 After OrbitUI Beta 28 publication, the user explicitly authorizes publishing
